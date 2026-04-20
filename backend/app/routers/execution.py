@@ -9,6 +9,6 @@ router = APIRouter(tags=["execution"])
 
 
 @router.post("/run", response_model=RunResponse)
-def run_code(request: RunRequest) -> RunResponse:
+async def run_code(request: RunRequest) -> RunResponse:
     """Execute user-submitted Python code and return stdout/stderr."""
-    return code_executor.run(request)
+    return await code_executor.run(request)
