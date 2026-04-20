@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import execution, health
+from app.routers import execution, health, interview
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -19,3 +19,4 @@ app.add_middleware(
 # Register routers
 app.include_router(health.router)
 app.include_router(execution.router)
+app.include_router(interview.router)
