@@ -1,5 +1,5 @@
 import { apiPost } from './client';
-import type { RunResponse, RunTestsResponse } from '../types';
+import type { RunResponse, RunTestsResponse, ChatMessage, SubmitResponse } from '../types';
 
 interface RunRequest {
   code: string;
@@ -10,6 +10,13 @@ interface RunTestsRequest {
   problem_id: string;
   code: string;
 }
+
+interface SubmitRequest {
+  problem_id: string;
+  code: string;
+  history: ChatMessage[];
+}
+
 
 export async function runCode(
   code: string,
@@ -25,5 +32,17 @@ export async function runTests(
   return apiPost<RunTestsRequest, RunTestsResponse>("/run-tests", {
     problem_id: problemId,
     code,
+  });
+}
+
+export async function submitSolution(
+  problemId: string,
+  code: string,
+  history: ChatMessage[],
+): Promise<SubmitResponse> {
+  return apiPost<SubmitRequest, SubmitResponse>("/submit", {
+    problem_id: problemId,
+    code,
+    history,
   });
 }

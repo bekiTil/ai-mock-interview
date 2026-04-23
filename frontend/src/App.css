@@ -468,6 +468,29 @@ code.example-value,
   min-height: 0;
   position: relative;
 }
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+ 
+.submit-button {
+  background: #2ea043;
+  color: #fff;
+  border: none;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.submit-button:hover:not(:disabled) { background: #3fb354; }
+.submit-button:disabled {
+  background: #3a3a3a;
+  color: #777;
+  cursor: not-allowed;
+}
+
 
 
 /* ==========================================================================
@@ -863,3 +886,144 @@ code.example-value,
 ::-webkit-scrollbar-track       { background: #1e1e1e; }
 ::-webkit-scrollbar-thumb       { background: #3a3a3a; border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: #505050; }
+ 
+/* ==========================================================================
+   10. EVALUATION CARD
+   ========================================================================== */
+ 
+.eval-card {
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-left-width: 3px;
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  color: #e6e6e6;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+ 
+/* Verdict-colored left accent + header text color. */
+.eval-strong     { border-left-color: #4ade80; }
+.eval-solid      { border-left-color: #60a5fa; }
+.eval-needs_work { border-left-color: #fbbf24; }
+.eval-not_ready  { border-left-color: #f87171; }
+ 
+.eval-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+ 
+.eval-header-label {
+  font-size: 11px;
+  color: #9a9a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+ 
+.eval-verdict {
+  font-size: 14px;
+  font-weight: 600;
+}
+.eval-strong     .eval-verdict { color: #4ade80; }
+.eval-solid      .eval-verdict { color: #60a5fa; }
+.eval-needs_work .eval-verdict { color: #fbbf24; }
+.eval-not_ready  .eval-verdict { color: #f87171; }
+ 
+/* ---------- Score grid ---------- */
+ 
+.eval-scores {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 20px;
+}
+ 
+.eval-score {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+ 
+.eval-score-label {
+  flex: 1 1 auto;
+  color: #cfcfcf;
+}
+ 
+.eval-score-bar {
+  display: flex;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+ 
+.eval-score-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #333;
+  border: 1px solid #3a3a3a;
+}
+ 
+.eval-score-dot.filled {
+  background: #9cdcfe;
+  border-color: #9cdcfe;
+}
+ 
+.eval-score-value {
+  flex: 0 0 auto;
+  color: #9a9a9a;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  min-width: 26px;
+  text-align: right;
+}
+ 
+/* ---------- Strengths / weaknesses ---------- */
+ 
+.eval-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+ 
+.eval-section-label {
+  font-size: 11px;
+  color: #9a9a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+ 
+.eval-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #d8d8d8;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.eval-list li { margin: 3px 0; }
+ 
+/* ---------- Summary paragraph ---------- */
+ 
+.eval-summary {
+  color: #e6e6e6;
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 4px;
+  border-left: 2px solid #333;
+}
+ 
+/* ---------- Responsive fallback ---------- */
+ 
+@media (max-width: 640px) {
+  .eval-scores {
+    grid-template-columns: 1fr;
+  }
+}

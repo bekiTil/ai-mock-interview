@@ -1,8 +1,15 @@
-import type { RunTestsResponse, TestCaseResult } from "../types";
+import type {
+  RunTestsResponse,
+  TestCaseResult,
+  Evaluation,
+} from "../types";
 
 interface OutputPanelProps {
   results: RunTestsResponse | null;
+  evaluation: Evaluation | null;
+  evaluationError: string | null;
   isRunning: boolean;
+  isSubmitting: boolean;
   error: string | null;
   paramNames?: string[];
 }
@@ -14,6 +21,78 @@ function formatCompact(value: unknown): string {
     return String(value);
   }
 }
+
+function verdictLabel(v: Evaluation["verdict"]): string {
+  switch (v) {
+    case "strong":     return "Strong candidate";
+    case "solid":      return "Solid candidate";
+    case "needs_work": return "Needs work";
+    case "not_ready":  return "Not ready";
+  }
+}
+
+// -------------------- Evaluation card --------------------
+
+function EvaluationCard({ evaluation }: { evaluation: Evaluation }) {
+  const axes: Array<{ label: string; value: number }> = [
+    { label: "Correctness",     value: evaluation.correctness },
+    { label: "Code quality",    value: evaluation.code_quality },
+    { label: "Communication",   value: evaluation.communication },
+    { label: "Problem solving", value: evaluation.problem_solving },
+  ];
+
+  return (
+    <div className={`eval-card eval-${evaluation.verdict}`}>
+      <div className="eval-header">
+        <span className="eval-header-label">Evaluation</span>
+        <span className="eval-verdict">{verdictLabel(evaluation.verdict)}</span>
+      </div>
+
+      <div className="eval-scores">
+        {axes.map((a) => (
+          <div key={a.label} className="eval-score">
+            <div className="eval-score-label">{a.label}</div>
+            <div className="eval-score-bar">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span
+                  key={n}
+                  className={`eval-score-dot ${n <= a.value ? "filled" : ""}`}
+                />
+              ))}
+            </div>
+            <div className="eval-score-value">{a.value}/5</div>
+          </div>
+        ))}
+      </div>
+
+      {evaluation.strengths.length > 0 && (
+        <div className="eval-section">
+          <div className="eval-section-label">Strengths</div>
+          <ul className="eval-list">
+            {evaluation.strengths.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {evaluation.weaknesses.length > 0 && (
+        <div className="eval-section">
+          <div className="eval-section-label">Areas to improve</div>
+          <ul className="eval-list">
+            {evaluation.weaknesses.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="eval-summary">{evaluation.summary}</div>
+    </div>
+  );
+}
+
+// -------------------- Case row --------------------
 
 function CaseRow({
   result,
@@ -76,17 +155,25 @@ function CaseRow({
   );
 }
 
+// -------------------- Panel --------------------
+
 function OutputPanel({
   results,
+  evaluation,
+  evaluationError,
   isRunning,
+  isSubmitting,
   error,
   paramNames,
 }: OutputPanelProps) {
-  if (isRunning) {
+  const busy = isRunning || isSubmitting;
+  if (busy) {
     return (
       <div className="output-panel">
         <div className="output-header">Output</div>
-        <div className="output-body output-status">Running tests…</div>
+        <div className="output-body output-status">
+          {isSubmitting ? "Evaluating submission…" : "Running tests…"}
+        </div>
       </div>
     );
   }
@@ -110,7 +197,8 @@ function OutputPanel({
       <div className="output-panel">
         <div className="output-header">Output</div>
         <div className="output-body output-status output-idle">
-          Click <strong>Run</strong> to grade your solution against the test cases.
+          Click <strong>Run</strong> to test your code, or{" "}
+          <strong>Submit</strong> for a full evaluation.
         </div>
       </div>
     );
@@ -127,6 +215,15 @@ function OutputPanel({
       </div>
 
       <div className="output-body">
+        {evaluation && <EvaluationCard evaluation={evaluation} />}
+
+        {evaluationError && (
+          <div className="output-error">
+            <div className="output-error-title">Evaluation error</div>
+            <pre className="output-error-body">{evaluationError}</pre>
+          </div>
+        )}
+
         <div className={`output-summary ${allPassed ? "summary-pass" : "summary-fail"}`}>
           <span className="summary-score">
             Passed {results.passed} / {results.total}

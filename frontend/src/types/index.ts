@@ -69,3 +69,24 @@ export interface RunTestsResponse {
   runtime_ms: number;
   timed_out: boolean;
 }
+
+export type EvalVerdict = "strong" | "solid" | "needs_work" | "not_ready";
+ 
+export interface Evaluation {
+  verdict: EvalVerdict;
+  correctness: number;     // 1-5
+  code_quality: number;    // 1-5
+  communication: number;   // 1-5
+  problem_solving: number; // 1-5
+  strengths: string[];
+  weaknesses: string[];
+  summary: string;
+}
+ 
+export interface SubmitResponse {
+  problem_id: string;
+  test_results: RunTestsResponse;
+  evaluation: Evaluation | null;
+  evaluation_error: string | null;
+}
+ 

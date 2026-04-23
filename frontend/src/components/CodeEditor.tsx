@@ -6,6 +6,8 @@ interface CodeEditorProps {
   onRun: () => void;
   isRunning: boolean;
   language?: string;
+  onSubmit: () => void;
+  isSubmitting: boolean;
 }
 
 export default function CodeEditor({
@@ -14,14 +16,29 @@ export default function CodeEditor({
   onRun,
   isRunning,
   language = 'python',
+  onSubmit,
+  isSubmitting,
 }: CodeEditorProps) {
   return (
     <>
       <div className="editor-toolbar">
         <span className="language-label">{language}</span>
-        <button className="run-button" onClick={onRun} disabled={isRunning}>
-          {isRunning ? 'Running...' : 'Run'}
-        </button>
+        <div className="editor-actions">
+          <button
+            className="run-button"
+            onClick={onRun}
+            disabled={isRunning || isSubmitting}
+          >
+            {isRunning ? "Running..." : "Run"}
+          </button>
+          <button
+            className="submit-button"
+            onClick={onSubmit}
+            disabled={isRunning || isSubmitting}
+          >
+            {isSubmitting ? "Evaluating..." : "Submit"}
+          </button>
+        </div>
       </div>
       <div className="editor-container">
         <Editor

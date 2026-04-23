@@ -8,6 +8,9 @@ from app.services.code_executor import code_executor
 from app.schemas.tests import RunTestsRequest, RunTestsResponse
 from app.services import test_runner
 from app.services.problem_bank import ProblemBankError
+from app.services.evaluator import evaluator
+from app.schemas.submission import SubmitRequest, SubmitResponse
+from app.services import problem_bank
 
 router = APIRouter(tags=["execution"])
 
@@ -38,3 +41,53 @@ async def run_tests(request: RunTestsRequest) -> RunTestsResponse:
         # Unknown problem_id — surface as 404 so the frontend can message
         # the user instead of blowing up in a red-banner way.
         raise HTTPException(status_code=404, detail=str(e))
+
+@router.post("/submit", response_model=SubmitResponse)
+async def submit(request: SubmitRequest) -> SubmitResponse:
+    """
+    Run the candidate's code against the test suite, then ask the LLM
+    to produce a calibrated interview evaluation.
+ 
+    Test results always come back. If the evaluation call fails, the
+    test results are preserved and the error is reported in
+    `evaluation_error` — the user shouldn't lose a test run because
+    Gemini had a hiccup.
+    """
+    if not request.code.strip():
+        raise HTTPException(status_code=400, detail="code is empty")
+ 
+    # 1. Run the test suite (same path as /run-tests).
+    try:
+        test_results = await test_runner.run_tests(
+            problem_id=request.problem_id,
+            candidate_code=request.code,
+        )
+    except ProblemBankError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+ 
+    # 2. Fetch the problem for the evaluator's context.
+    try:
+        problem = problem_bank.get_problem(request.problem_id)
+    except ProblemBankError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+ 
+    # 3. Evaluate.
+    evaluation = None
+    evaluation_error = None
+    try:
+        evaluation = await evaluator.evaluate(
+            problem=problem,
+            code=request.code,
+            history=request.history,
+            test_results=test_results,
+        )
+    except Exception as e:
+        evaluation_error = f"{type(e).__name__}: {e}"
+ 
+    return SubmitResponse(
+        problem_id=request.problem_id,
+        test_results=test_results,
+        evaluation=evaluation,
+        evaluation_error=evaluation_error,
+    )
+ 

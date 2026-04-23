@@ -7,12 +7,13 @@ import CodeEditor from "./components/CodeEditor";
 import OutputPanel from "./components/OutputPanel";
 import ProblemPicker from "./components/ProblemPicker";
 
-import { runTests } from "./api/execution";
+import { runTests, submitSolution } from "./api/execution";
 import { sendTurn } from "./api/interview";
 import { fetchRandomProblem } from "./api/problems";
 
 import type {
   ChatMessage,
+  Evaluation,
   PublicProblem,
   RunTestsResponse,
 } from "./types";
@@ -44,10 +45,15 @@ function App() {
 
   const [code, setCode] = useState<string>("");
 
-  // NEW — structured grading state replaces the old `output` string.
+  // Run / Submit output state.
   const [testResults, setTestResults] = useState<RunTestsResponse | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<boolean>(false);
+
+  // Submit-only state (the scorecard).
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState<boolean>(false);
@@ -84,10 +90,12 @@ function App() {
     if (greetedForIdRef.current === problem.id) return;
     greetedForIdRef.current = problem.id;
 
-    // Clear surfaces that belong to the previous problem.
+    // Clear everything that belongs to the previous problem.
     setMessages([]);
     setTestResults(null);
     setRunError(null);
+    setEvaluation(null);
+    setEvaluationError(null);
 
     (async () => {
       setIsSending(true);
@@ -113,12 +121,14 @@ function App() {
     })();
   }, [problem?.id]);
 
-  // --- Run (now a graded test run) ---
+  // --- Run (test only) ---
   async function handleRun() {
     if (!problem) return;
     setIsRunning(true);
     setTestResults(null);
     setRunError(null);
+    setEvaluation(null);
+    setEvaluationError(null);
     try {
       const results = await runTests(problem.id, code);
       setTestResults(results);
@@ -126,6 +136,27 @@ function App() {
       setRunError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsRunning(false);
+    }
+  }
+
+  async function handleSubmit() {
+    if (!problem) return;
+    setIsSubmitting(true);
+    setTestResults(null);
+    setRunError(null);
+    setEvaluation(null);
+    setEvaluationError(null);
+    try {
+      
+      const backendHistory = [OPENING_CANDIDATE_MESSAGE, ...messages];
+      const response = await submitSolution(problem.id, code, backendHistory);
+      setTestResults(response.test_results);
+      setEvaluation(response.evaluation);
+      setEvaluationError(response.evaluation_error);
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -192,13 +223,18 @@ function App() {
             code={code}
             onChange={setCode}
             onRun={handleRun}
+            onSubmit={handleSubmit}
             isRunning={isRunning}
+            isSubmitting={isSubmitting}
           />
           <OutputPanel
             results={testResults}
+            evaluation={evaluation}
+            evaluationError={evaluationError}
             isRunning={isRunning}
+            isSubmitting={isSubmitting}
             error={runError}
-            paramNames={problem?.function_signature.params.map((p) => p.name) ?? []}
+            paramNames={problem?.function_signature.params.map((p) => p.name)}
           />
         </div>
       </div>
