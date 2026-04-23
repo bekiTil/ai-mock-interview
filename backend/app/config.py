@@ -14,6 +14,8 @@ class Settings:
 
     # LLM (Gemini)
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+
 
     # Code execution (Judge0 via RapidAPI)
     JUDGE0_API_KEY: str = os.getenv("JUDGE0_API_KEY", "")

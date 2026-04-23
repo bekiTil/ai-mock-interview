@@ -1,91 +1,214 @@
-import { useState } from 'react';
-import Header from './components/Header';
-import ProblemStatement from './components/ProblemStatement';
-import ChatPanel from './components/ChatPanel';
-import CodeEditor from './components/CodeEditor';
-import OutputPanel from './components/OutputPanel';
-import { runCode } from './api/execution';
-import type { ChatMessage, RunResponse } from './types';
-import './App.css';
+import { useState, useEffect, useRef } from "react";
 
-const INITIAL_CODE = `def two_sum(nums, target):
-    # Your solution here
-    pass
+import Header from "./components/Header";
+import ProblemStatement from "./components/ProblemStatement";
+import ChatPanel from "./components/ChatPanel";
+import CodeEditor from "./components/CodeEditor";
+import OutputPanel from "./components/OutputPanel";
+import ProblemPicker from "./components/ProblemPicker";
 
-print(two_sum([2, 7, 11, 15], 9))
-`;
+import { runTests } from "./api/execution";
+import { sendTurn } from "./api/interview";
+import { fetchRandomProblem } from "./api/problems";
 
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    role: 'interviewer',
-    content:
-      'Hi! Welcome. Take a minute to read the problem, then walk me through your thinking.',
-  },
-];
+import type {
+  ChatMessage,
+  PublicProblem,
+  RunTestsResponse,
+} from "./types";
+import "./App.css";
 
-function formatOutput(data: RunResponse): string {
-  const parts = [
-    data.stdout && `--- stdout ---\n${data.stdout}`,
-    data.stderr && `--- stderr ---\n${data.stderr}`,
-    `(runtime: ${data.runtime_ms}ms)`,
-  ].filter(Boolean);
-  return parts.join('\n\n') || '(no output)';
+const OPENING_CANDIDATE_MESSAGE: ChatMessage = {
+  role: "candidate",
+  content:
+    "Hi, I'm ready to start the interview. Please introduce yourself and walk me through how you'd like to proceed.",
+};
+
+function formatExamples(problem: PublicProblem): string {
+  return problem.examples
+    .map((ex, i) => {
+      const lines = [
+        `Example ${i + 1}:`,
+        `Input:  ${ex.input}`,
+        `Output: ${ex.output}`,
+      ];
+      if (ex.explanation) lines.push(`Explanation: ${ex.explanation}`);
+      return lines.join("\n");
+    })
+    .join("\n\n");
 }
 
 function App() {
-  const [code, setCode] = useState<string>(INITIAL_CODE);
-  const [output, setOutput] = useState<string>('');
-  const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [messages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [problem, setProblem] = useState<PublicProblem | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState<boolean>(false);
 
-  const handleRun = async () => {
+  const [code, setCode] = useState<string>("");
+
+  // NEW — structured grading state replaces the old `output` string.
+  const [testResults, setTestResults] = useState<RunTestsResponse | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isSending, setIsSending] = useState<boolean>(false);
+
+  const fetchedRef = useRef<boolean>(false);
+  const greetedForIdRef = useRef<string | null>(null);
+
+  // --- Fetch a random problem once on mount ---
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
+    (async () => {
+      try {
+        const p = await fetchRandomProblem();
+        setProblem(p);
+        setCode(p.starter_code);
+      } catch (err) {
+        setMessages([
+          {
+            role: "interviewer",
+            content: `[error loading problem] ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          },
+        ]);
+      }
+    })();
+  }, []);
+
+  // --- Fire the greeting once per problem id ---
+  useEffect(() => {
+    if (!problem) return;
+    if (greetedForIdRef.current === problem.id) return;
+    greetedForIdRef.current = problem.id;
+
+    // Clear surfaces that belong to the previous problem.
+    setMessages([]);
+    setTestResults(null);
+    setRunError(null);
+
+    (async () => {
+      setIsSending(true);
+      try {
+        const reply = await sendTurn(
+          [OPENING_CANDIDATE_MESSAGE],
+          undefined,
+          { title: problem.title, description: problem.description },
+        );
+        setMessages([{ role: "interviewer", content: reply }]);
+      } catch (err) {
+        setMessages([
+          {
+            role: "interviewer",
+            content: `[error starting session] ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          },
+        ]);
+      } finally {
+        setIsSending(false);
+      }
+    })();
+  }, [problem?.id]);
+
+  // --- Run (now a graded test run) ---
+  async function handleRun() {
+    if (!problem) return;
     setIsRunning(true);
-    setOutput('Running...');
+    setTestResults(null);
+    setRunError(null);
     try {
-      const data = await runCode(code);
-      setOutput(formatOutput(data));
+      const results = await runTests(problem.id, code);
+      setTestResults(results);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setOutput(`Error: ${msg}\n\nIs the backend running on port 8000?`);
+      setRunError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsRunning(false);
     }
-  };
+  }
+
+  async function handleSend(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || isSending || !problem) return;
+
+    const candidateMsg: ChatMessage = { role: "candidate", content: trimmed };
+    const visibleHistory = [...messages, candidateMsg];
+    const backendHistory = [OPENING_CANDIDATE_MESSAGE, ...visibleHistory];
+
+    setMessages(visibleHistory);
+    setIsSending(true);
+
+    try {
+      const reply = await sendTurn(backendHistory, code, {
+        title: problem.title,
+        description: problem.description,
+      });
+      setMessages((prev) => [...prev, { role: "interviewer", content: reply }]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "interviewer",
+          content: `[error] ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        },
+      ]);
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  function handlePickProblem(p: PublicProblem) {
+    setProblem(p);
+    setCode(p.starter_code);
+  }
 
   return (
     <div className="app">
-      <Header problemTitle="Two Sum" />
-
-      <main className="app-main">
-        <section className="chat-panel">
+      <Header
+        problemTitle={problem?.title ?? "Loading..."}
+        onSwitchProblem={() => setIsPickerOpen(true)}
+      />
+      <div className="main">
+        <div className="left-panel">
           <ProblemStatement
-            title="Two Sum"
+            title={problem?.title ?? "Loading..."}
             description={
-              <p>
-                Given an array of integers <code>nums</code> and an integer{' '}
-                <code>target</code>, return indices of the two numbers such that
-                they add up to <code>target</code>.
-              </p>
+              problem?.description ?? "Fetching a random problem from the bank…"
             }
-            example={`Input: nums = [2, 7, 11, 15], target = 9
-Output: [0, 1]`}
+            example={problem ? formatExamples(problem) : ""}
           />
-          <ChatPanel messages={messages} />
-          <div className="chat-input">
-            <input type="text" placeholder="Chat (coming soon)" disabled />
-          </div>
-        </section>
-
-        <section className="code-panel">
+          <ChatPanel
+            messages={messages}
+            onSend={handleSend}
+            isSending={isSending}
+          />
+        </div>
+        <div className="code-panel">
           <CodeEditor
             code={code}
             onChange={setCode}
             onRun={handleRun}
             isRunning={isRunning}
           />
-          <OutputPanel output={output} />
-        </section>
-      </main>
+          <OutputPanel
+            results={testResults}
+            isRunning={isRunning}
+            error={runError}
+            paramNames={problem?.function_signature.params.map((p) => p.name) ?? []}
+          />
+        </div>
+      </div>
+
+      <ProblemPicker
+        isOpen={isPickerOpen}
+        currentProblemId={problem?.id}
+        onClose={() => setIsPickerOpen(false)}
+        onPick={handlePickProblem}
+      />
     </div>
   );
 }

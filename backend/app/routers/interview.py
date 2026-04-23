@@ -10,9 +10,18 @@ router = APIRouter(prefix="/interview", tags=["interview"])
 
 @router.post("/turn", response_model=InterviewTurnResponse)
 async def take_turn(request: InterviewTurnRequest) -> InterviewTurnResponse:
-    """Given the full chat history, return the interviewer's next message."""
+    if not request.history or request.history[-1].role != "candidate":
+        raise HTTPException(
+            status_code=400,
+            detail="history must end with a candidate message",
+        )
     try:
-        message = await interviewer.next_turn(request.history)
+        message = await interviewer.next_turn(
+            history=request.history,
+            code=request.code,
+            problem_title=request.problem_title,
+            problem_description=request.problem_description,
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
     return InterviewTurnResponse(message=message)

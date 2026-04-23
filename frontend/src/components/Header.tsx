@@ -1,12 +1,17 @@
 interface HeaderProps {
   problemTitle: string;
+  onSwitchProblem?: () => void;
 }
 
-export default function Header({ problemTitle }: HeaderProps) {
+export default function Header({ problemTitle, onSwitchProblem }: HeaderProps) {
   return (
-    <header className="app-header">
-      <h1>AI Mock Interview</h1>
-      <span className="problem-title">{problemTitle}</span>
+    <header className="header">
+      <h1 className="header-title">{problemTitle}</h1>
+      {onSwitchProblem && (
+        <button className="header-button" onClick={onSwitchProblem}>
+          New Problem
+        </button>
+      )}
     </header>
   );
 }

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import execution, health, interview
+from app.routers import execution, health, interview, problems
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -20,3 +20,4 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(execution.router)
 app.include_router(interview.router)
+app.include_router(problems.router)

@@ -1,6 +1,6 @@
 """Pydantic models for the interview endpoint."""
 
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -12,6 +12,9 @@ class ChatMessage(BaseModel):
 
 class InterviewTurnRequest(BaseModel):
     history: list[ChatMessage]
+    code: Optional[str] = None
+    problem_title: Optional[str] = None
+    problem_description: Optional[str] = None
 
 
 class InterviewTurnResponse(BaseModel):
