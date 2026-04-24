@@ -1,0 +1,26 @@
+# Render blueprint — drop this at the ROOT of your repo (not inside backend/).
+# Then in Render's dashboard: New → Blueprint → connect GitHub repo. It reads this file.
+
+services:
+  - type: web
+    name: mock-with-ai-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false   # set in Render dashboard, don't commit
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash-lite
+      - key: JUDGE0_API_KEY
+        sync: false
+      - key: JUDGE0_API_HOST
+        value: judge0-ce.p.rapidapi.com
+      - key: CORS_ORIGINS
+        value: https://mock-with-ai.is-a.dev,https://mock-with-ai.vercel.app,http://localhost:5173
+      - key: ENV
+        value: production
+    # Render sets $PORT automatically; uvicorn picks it up from the Dockerfile CMD.
