@@ -1,257 +1,314 @@
+// frontend/src/components/ProblemPicker.tsx
+//
+// v1.1 — two fixes on top of v1:
+//
+//   1. Uses the existing `listProblems()` API (returns ProblemSummary[]),
+//      not the non-existent `fetchProblems()`. The list endpoint is
+//      lightweight (id, title, category, difficulty) — that's all the
+//      picker needs.
+//
+//   2. Passes a ProblemSummary (not a full PublicProblem) to onPick.
+//      The parent is responsible for calling fetchProblemById() to
+//      hydrate the full problem (with examples + starter_code + etc.)
+//      before setting it as the active problem. That's what caused
+//      the `Cannot read properties of undefined (reading 'map')` crash
+//      — the picker was handing back a half-populated object that
+//      `formatExamples` then tried to map over.
+//
+// Props changed: `onPick` now receives a `ProblemSummary`.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  fetchProblemById,
-  fetchRandomProblem,
-  listProblems,
-} from "../api/problems";
-import type { Difficulty, ProblemSummary, PublicProblem } from "../types";
+import { listProblems } from "../api/problems";
+import type { ProblemSummary } from "../types";
 
-interface Props {
+interface ProblemPickerProps {
   isOpen: boolean;
   currentProblemId?: string;
   onClose: () => void;
-  onPick: (problem: PublicProblem) => void;
+  onPick: (problem: ProblemSummary) => void;
 }
 
-// Known categories from the cleaned bank. Kept static so the dropdown is
-// stable even before the summaries come back.
-const CATEGORIES = [
-  "Arrays & Hashing",
-  "Two Pointers",
-  "Sliding Window",
-  "Stack",
-  "Binary Search",
-  "1D DP",
-];
-
-const DIFFICULTIES: Difficulty[] = ["easy", "medium", "hard"];
-
-// Sentinel used for the Random button's loading state so we don't have to
-// nullable-check a string against a separate boolean.
-const RANDOM_LOADING = "__random__";
-
-export default function ProblemPicker({
+function ProblemPicker({
   isOpen,
   currentProblemId,
   onClose,
   onPick,
-}: Props) {
-  const [summaries, setSummaries] = useState<ProblemSummary[]>([]);
-  const [isLoadingList, setIsLoadingList] = useState(false);
-  const [selectingId, setSelectingId] = useState<string | null>(null);
+}: ProblemPickerProps) {
+  const [problems, setProblems] = useState<ProblemSummary[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [search, setSearch] = useState("");
-  const [catFilter, setCatFilter] = useState("");
-  const [diffFilter, setDiffFilter] = useState("");
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<string>("all");
+  const [difficulty, setDifficulty] = useState<string>("all");
 
-  // --- Load the summary list the first time the modal opens --------------
+  const searchRef = useRef<HTMLInputElement | null>(null);
+
+  // ---- Fetch problems on open ----
   useEffect(() => {
     if (!isOpen) return;
-    if (summaries.length > 0) return;
-
     let cancelled = false;
-    setIsLoadingList(true);
+    setLoading(true);
     setError(null);
-
-    listProblems()
-      .then((list) => {
-        if (!cancelled) setSummaries(list);
-      })
-      .catch((err) => {
+    (async () => {
+      try {
+        const list = await listProblems();
+        if (!cancelled) setProblems(list);
+      } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));
         }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingList(false);
-      });
-
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [isOpen, summaries.length]);
+  }, [isOpen]);
 
-  // --- Close on Escape ---------------------------------------------------
+  // ---- ESC closes, focus search on open ----
   useEffect(() => {
     if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => {
+    const t = setTimeout(() => searchRef.current?.focus(), 40);
+    function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("keydown", onKey);
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
-  // --- Filter + group ----------------------------------------------------
+  // ---- Derived data ----
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    problems.forEach((p) => {
+      if (p.category) set.add(p.category);
+    });
+    return Array.from(set).sort();
+  }, [problems]);
+
   const filtered = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return summaries.filter((p) => {
-      if (catFilter && p.category !== catFilter) return false;
-      if (diffFilter && p.difficulty !== diffFilter) return false;
-      if (needle && !p.title.toLowerCase().includes(needle)) return false;
+    const q = query.trim().toLowerCase();
+    return problems.filter((p) => {
+      if (q && !p.title.toLowerCase().includes(q)) return false;
+      const pcat = p.category ?? "Other";
+      if (category !== "all" && pcat !== category) return false;
+      const pdiff = String(p.difficulty).toLowerCase();
+      if (difficulty !== "all" && pdiff !== difficulty) return false;
       return true;
     });
-  }, [summaries, search, catFilter, diffFilter]);
+  }, [problems, query, category, difficulty]);
 
   const grouped = useMemo(() => {
-    const byCat = new Map<string, ProblemSummary[]>();
-    for (const p of filtered) {
-      const arr = byCat.get(p.category) ?? [];
-      arr.push(p);
-      byCat.set(p.category, arr);
-    }
-    return Array.from(byCat.entries());
+    const map = new Map<string, ProblemSummary[]>();
+    filtered.forEach((p) => {
+      const key = p.category ?? "Other";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    });
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [filtered]);
 
-  // --- Handlers ----------------------------------------------------------
-  async function handlePickId(id: string) {
-    if (id === currentProblemId) {
-      onClose();
-      return;
-    }
-    setSelectingId(id);
-    setError(null);
-    try {
-      const full = await fetchProblemById(id);
-      onPick(full);
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSelectingId(null);
-    }
+  // ---- Actions ----
+  function pickRandom() {
+    if (filtered.length === 0) return;
+    const choice = filtered[Math.floor(Math.random() * filtered.length)];
+    onPick(choice);
+    onClose();
   }
 
-  async function handleRandom() {
-    setSelectingId(RANDOM_LOADING);
-    setError(null);
-    try {
-      const random = await fetchRandomProblem({
-        category: catFilter || undefined,
-        difficulty: diffFilter || undefined,
-        exclude: currentProblemId ? [currentProblemId] : undefined,
-      });
-      onPick(random);
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSelectingId(null);
-    }
+  function handlePick(p: ProblemSummary) {
+    onPick(p);
+    onClose();
   }
 
   if (!isOpen) return null;
 
-  const isBusy = selectingId !== null;
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="picker-overlay" onClick={onClose}>
       <div
-        className="modal-content picker-modal"
+        className="picker-panel"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Pick a problem"
+        aria-labelledby="picker-title"
       >
-        <div className="modal-header">
-          <h2>Pick a problem</h2>
+        <div className="picker-header">
+          <div>
+            <h2 id="picker-title" className="picker-title">Pick a problem</h2>
+            <p className="picker-sub">
+              {loading
+                ? "Loading…"
+                : `${filtered.length} of ${problems.length} problems`}
+            </p>
+          </div>
           <button
-            className="modal-close"
+            className="picker-close"
             onClick={onClose}
             aria-label="Close"
+            type="button"
           >
-            ×
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path
+                d="M4 4L12 12M12 4L4 12"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
         </div>
 
         <div className="picker-filters">
-          <input
-            type="text"
-            className="picker-search"
-            placeholder="Search problems…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus
-          />
+          <div className="picker-search">
+            <SearchIcon />
+            <input
+              ref={searchRef}
+              className="picker-search-input"
+              type="text"
+              placeholder="Search problems…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {query && (
+              <button
+                className="picker-search-clear"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                type="button"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+
           <select
-            value={catFilter}
-            onChange={(e) => setCatFilter(e.target.value)}
             className="picker-select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
           >
-            <option value="">All categories</option>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+            <option value="all">All categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
+
           <select
-            value={diffFilter}
-            onChange={(e) => setDiffFilter(e.target.value)}
             className="picker-select"
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
           >
-            <option value="">All difficulties</option>
-            {DIFFICULTIES.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
+            <option value="all">All difficulties</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
           </select>
+
           <button
             className="picker-random"
-            onClick={handleRandom}
-            disabled={isBusy}
+            onClick={pickRandom}
+            disabled={filtered.length === 0 || loading}
+            type="button"
           >
-            {selectingId === RANDOM_LOADING ? "Loading…" : "Random"}
+            <ShuffleIcon />
+            <span>Random</span>
           </button>
         </div>
 
-        {error && <p className="picker-error">Error: {error}</p>}
+        <div className="picker-body">
+          {loading && (
+            <div className="picker-state">Loading problems…</div>
+          )}
+          {error && !loading && (
+            <div className="picker-state picker-state-error">
+              Couldn't load problems: {error}
+            </div>
+          )}
+          {!loading && !error && filtered.length === 0 && (
+            <div className="picker-state">
+              No problems match your filters.
+            </div>
+          )}
 
-        <div className="picker-list">
-          {isLoadingList ? (
-            <p className="picker-loading">Loading problems…</p>
-          ) : filtered.length === 0 ? (
-            <p className="picker-empty">No problems match your filters.</p>
-          ) : (
-            grouped.map(([cat, items]) => (
-              <div key={cat} className="picker-group">
-                <h3 className="picker-group-title">{cat}</h3>
-                {items.map((p) => {
+          {!loading && !error && grouped.map(([cat, list]) => (
+            <div key={cat} className="picker-group">
+              <div className="picker-group-header">
+                <span className="picker-group-name">{cat}</span>
+                <span className="picker-group-count">{list.length}</span>
+              </div>
+              <ul className="picker-items">
+                {list.map((p) => {
                   const isCurrent = p.id === currentProblemId;
-                  const isLoading = selectingId === p.id;
+                  const diffClass = String(p.difficulty).toLowerCase();
+                  const diffLabel =
+                    diffClass.charAt(0).toUpperCase() + diffClass.slice(1);
                   return (
-                    <button
-                      key={p.id}
-                      className={
-                        "picker-item" +
-                        (isCurrent ? " picker-item-current" : "")
-                      }
-                      onClick={() => handlePickId(p.id)}
-                      disabled={isBusy}
-                    >
-                      <span className="picker-item-title">
-                        {p.title}
-                        {isCurrent && " (current)"}
-                      </span>
-                      <span
-                        className={`difficulty-badge difficulty-${p.difficulty}`}
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        className={`picker-item ${isCurrent ? "current" : ""}`}
+                        onClick={() => handlePick(p)}
                       >
-                        {p.difficulty}
-                      </span>
-                      {isLoading && (
-                        <span className="picker-item-spinner">…</span>
-                      )}
-                    </button>
+                        <span className="picker-item-left">
+                          <span className="picker-item-title">{p.title}</span>
+                          {isCurrent && (
+                            <span className="picker-item-current-tag">current</span>
+                          )}
+                        </span>
+                        <span className={`diff-chip diff-${diffClass}`}>
+                          {diffLabel}
+                        </span>
+                      </button>
+                    </li>
                   );
                 })}
-              </div>
-            ))
-          )}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="picker-footer">
+          <span className="picker-footer-hint">
+            <kbd>Esc</kbd> to close · <kbd>↑↓</kbd> to scroll
+          </span>
         </div>
       </div>
     </div>
   );
 }
+
+/* ---------- icons ---------- */
+
+function SearchIcon() {
+  return (
+    <svg
+      className="picker-search-icon"
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      aria-hidden
+    >
+      <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M9.5 9.5L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ShuffleIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path d="M11 3L13 5L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M11 7L13 9L11 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M1 5H4L8 9H13M1 9H4L5 8M8 5H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export default ProblemPicker;

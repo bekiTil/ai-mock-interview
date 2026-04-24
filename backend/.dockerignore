@@ -1,0 +1,34 @@
+# Rename this file to `.dockerignore` and put it next to the Dockerfile.
+# Keeps the Docker build context small so Railway builds are fast.
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+.env
+.env.*
+!.env.example
+
+.git/
+.gitignore
+.github/
+
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+node_modules/
+dist/
+build/
+*.log

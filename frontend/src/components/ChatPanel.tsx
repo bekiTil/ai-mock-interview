@@ -1,5 +1,16 @@
-import { useState, useRef, useEffect } from "react";
-import type { KeyboardEvent } from "react";
+// frontend/src/components/ChatPanel.tsx
+//
+// v1 redesign — proper chat UI.
+//   - Message bubbles with role-differentiated styling
+//   - Animated typing indicator while awaiting response
+//   - Autoscroll on new message / typing state change
+//   - Empty state explaining what to do
+//   - Auto-resizing textarea (up to 140px)
+//   - Enter sends, Shift+Enter inserts newline
+//
+// Props unchanged — drop-in replacement.
+
+import { useState, useRef, useEffect, type KeyboardEvent, type FormEvent } from "react";
 import type { ChatMessage } from "../types";
 
 interface ChatPanelProps {
@@ -8,148 +19,152 @@ interface ChatPanelProps {
   isSending: boolean;
 }
 
-// Render a message's content, turning `backtick` spans into <code>.
-// This is deliberately simple — we're not parsing full markdown,
-// just the one thing that matters for interview conversations.
-function renderContent(content: string) {
-  const parts = content.split(/(`[^`]+`)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
-      return (
-        <code key={i} className="chat-inline-code">
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
-
-function formatTime(date: Date): string {
-  const h = date.getHours().toString().padStart(2, "0");
-  const m = date.getMinutes().toString().padStart(2, "0");
-  return `${h}:${m}`;
-}
-
 function ChatPanel({ messages, onSend, isSending }: ChatPanelProps) {
-  const [draft, setDraft] = useState<string>("");
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [draft, setDraft] = useState("");
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Auto-scroll to the bottom on new messages or thinking state.
+  // Autoscroll to bottom on new messages or when the typing indicator toggles.
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isSending]);
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages.length, isSending]);
 
-  // Auto-focus the input the moment it becomes enabled.
-  // (It starts disabled during the initial greeting.)
+  // Auto-resize textarea as user types (bounded).
   useEffect(() => {
-    if (!isSending && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isSending]);
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  }, [draft]);
 
-  // Timestamps: we generate one when the component sees each new
-  // message, not when the message was created. For a session that
-  // lives only in memory, this is close enough and avoids changing
-  // the ChatMessage schema.
-  const messageTimes = useRef<Map<number, string>>(new Map());
-  messages.forEach((_, idx) => {
-    if (!messageTimes.current.has(idx)) {
-      messageTimes.current.set(idx, formatTime(new Date()));
-    }
-  });
-
-  function handleSendClick() {
-    if (!draft.trim() || isSending) return;
-    onSend(draft);
+  function handleSubmit(e?: FormEvent) {
+    e?.preventDefault();
+    const trimmed = draft.trim();
+    if (!trimmed || isSending) return;
+    onSend(trimmed);
     setDraft("");
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendClick();
+      handleSubmit();
     }
   }
 
-  // The very first render has zero messages AND isSending=true
-  // because the greeting is in flight. We show a distinct
-  // "connecting" state so the panel isn't just an empty void.
-  const isInitialGreeting = messages.length === 0 && isSending;
+  const isEmpty = messages.length === 0 && !isSending;
 
   return (
-    <div className="chat-panel">
-      <div className="chat-messages" ref={scrollRef}>
-        {isInitialGreeting && (
-          <div className="chat-connecting">
-            <div className="chat-role">Interviewer</div>
-            <div className="chat-dots">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-        )}
-
-        {!isInitialGreeting && messages.length === 0 && (
-          <div className="chat-empty">Waiting for interviewer…</div>
-        )}
-
-        {messages.map((msg, idx) => (
-          <div key={idx} className={`chat-message chat-${msg.role}`}>
-            <div className="chat-meta">
-              <span className="chat-role">
-                {msg.role === "interviewer" ? "Interviewer" : "You"}
-              </span>
-              <span className="chat-time">
-                {messageTimes.current.get(idx) ?? ""}
-              </span>
-            </div>
-            <div className="chat-content">{renderContent(msg.content)}</div>
-          </div>
-        ))}
-
-        {isSending && !isInitialGreeting && (
-          <div className="chat-message chat-interviewer chat-thinking">
-            <div className="chat-meta">
-              <span className="chat-role">Interviewer</span>
-            </div>
-            <div className="chat-dots">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-        )}
+    <section className="chat-panel">
+      <div className="chat-header">
+        <span className="chat-header-label">
+          <span className="chat-header-dot" />
+          Interview
+        </span>
+        <span className="chat-header-hint">Enter to send · Shift+Enter for newline</span>
       </div>
 
-      <div className="chat-input-row">
+      <div className="chat-scroll" ref={scrollRef}>
+        {isEmpty && <ChatEmpty />}
+
+        {messages.map((m, i) => (
+          <MessageBubble key={i} message={m} />
+        ))}
+
+        {isSending && <TypingIndicator />}
+      </div>
+
+      <form className="chat-composer" onSubmit={handleSubmit}>
         <textarea
-          ref={inputRef}
-          className="chat-input"
+          ref={textareaRef}
+          className="chat-textarea"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={
-            isSending
-              ? "Waiting for interviewer…"
-              : "Ask a question or talk through your approach…"
-          }
-          disabled={isSending}
-          rows={2}
+          placeholder="Ask a question or talk through your approach…"
+          rows={1}
         />
         <button
+          type="submit"
           className="chat-send"
-          onClick={handleSendClick}
           disabled={!draft.trim() || isSending}
+          aria-label="Send message"
         >
-          Send
+          <SendIcon />
         </button>
+      </form>
+    </section>
+  );
+}
+
+/* ---------- subcomponents ---------- */
+
+function MessageBubble({ message }: { message: ChatMessage }) {
+  const isInterviewer = message.role === "interviewer";
+  return (
+    <div className={`chat-msg ${isInterviewer ? "chat-msg-interviewer" : "chat-msg-candidate"}`}>
+      <div className="chat-msg-header">
+        <span className="chat-msg-avatar" aria-hidden>
+          {isInterviewer ? "AI" : "YOU"}
+        </span>
+        <span className="chat-msg-role">
+          {isInterviewer ? "Interviewer" : "You"}
+        </span>
+      </div>
+      <div className="chat-msg-body">{message.content}</div>
+    </div>
+  );
+}
+
+function ChatEmpty() {
+  return (
+    <div className="chat-empty">
+      <div className="chat-empty-icon">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+          <path
+            d="M6 8A2 2 0 018 6h16a2 2 0 012 2v12a2 2 0 01-2 2H13l-5 4v-4H8a2 2 0 01-2-2V8z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+      <p className="chat-empty-title">Your interviewer will appear here</p>
+      <p className="chat-empty-sub">
+        Talk through your approach, ask clarifying questions, and walk through
+        edge cases before coding. Silent submits score 1/5 on communication.
+      </p>
+    </div>
+  );
+}
+
+function TypingIndicator() {
+  return (
+    <div className="chat-msg chat-msg-interviewer chat-msg-typing">
+      <div className="chat-msg-header">
+        <span className="chat-msg-avatar" aria-hidden>AI</span>
+        <span className="chat-msg-role">Interviewer</span>
+      </div>
+      <div className="chat-typing">
+        <span />
+        <span />
+        <span />
       </div>
     </div>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M2 8L14 2L9.5 14L7.5 9L2 8Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

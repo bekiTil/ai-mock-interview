@@ -1,0 +1,167 @@
+:root {
+  /* ---------- Surfaces ---------- */
+  --bg-page:         #0a0a0a;   /* page background */
+  --bg-surface:      #111111;   /* cards, panels */
+  --bg-elevated:     #171717;   /* hover / modals */
+  --bg-subtle:       #0f0f0f;
+  --bg-code:         #0d0d0d;
+
+  /* ---------- Borders ---------- */
+  --border-subtle:   #1a1a1a;
+  --border-default:  #262626;
+  --border-strong:   #333333;
+  --border-focus:    #3f3f3f;
+
+  /* ---------- Text ---------- */
+  --text-primary:    #ededed;
+  --text-secondary:  #a1a1a1;
+  --text-muted:      #666666;
+  --text-dim:        #404040;
+
+  /* ---------- Accents ---------- */
+  --accent-primary:     #ffffff;
+  --accent-primary-fg:  #000000;
+  --accent-hover:       #e5e5e5;
+
+  --accent-blue:        #60a5fa;
+  --accent-green:       #4ade80;
+  --accent-yellow:      #fbbf24;
+  --accent-red:         #f87171;
+  --accent-purple:      #a78bfa;
+
+  --link:            #a1a1a1;
+  --link-hover:      #ededed;
+  --focus-ring:      rgba(96, 165, 250, 0.4);
+
+  /* ---------- Semantic ---------- */
+  --success:         #4ade80;
+  --warning:         #fbbf24;
+  --danger:          #f87171;
+  --info:            #60a5fa;
+
+  /* ---------- Shadows (subtle, never flashy) ---------- */
+  --shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md:       0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg:       0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-ring:     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-glow:     0 0 40px rgba(96, 165, 250, 0.15);
+
+  /* ---------- Radii ---------- */
+  --radius-sm:       4px;
+  --radius-md:       6px;
+  --radius-lg:       10px;
+  --radius-xl:       16px;
+  --radius-full:     999px;
+
+  /* ---------- Typography ---------- */
+  --font-sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:  "JetBrains Mono", "SF Mono", Menlo, Consolas,
+                "Liberation Mono", monospace;
+
+  --fs-xs:           12px;
+  --fs-sm:           13px;
+  --fs-base:         14px;
+  --fs-md:           15px;
+  --fs-lg:           17px;
+  --fs-xl:           20px;
+  --fs-2xl:          28px;
+  --fs-3xl:          40px;
+  --fs-4xl:          56px;
+  --fs-5xl:          72px;
+
+  --lh-tight:        1.15;
+  --lh-snug:         1.35;
+  --lh-normal:       1.5;
+  --lh-relaxed:      1.7;
+
+  --fw-normal:       400;
+  --fw-medium:       500;
+  --fw-semibold:     600;
+  --fw-bold:         700;
+
+  --tracking-tight:  -0.02em;
+  --tracking-tighter:-0.035em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.04em;
+  --tracking-wider:  0.08em;
+
+  /* ---------- Spacing ---------- */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
+  --space-24:  96px;
+
+  /* ---------- Motion ---------- */
+  --ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast:   120ms;
+  --duration-base:   180ms;
+  --duration-slow:   280ms;
+
+  /* ---------- Layout ---------- */
+  --max-content:     1200px;
+  --max-prose:       680px;
+}
+
+/* ---------- Global base ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01", "ss03";
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(96, 165, 250, 0.3);
+  color: var(--text-primary);
+}
+
+/* Focus-visible ring for keyboard accessibility */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Scrollbar polish (webkit only — Firefox falls back to defaults) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}

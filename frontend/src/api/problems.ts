@@ -41,6 +41,10 @@ export function listProblems(opts: ListOpts = {}): Promise<ProblemSummary[]> {
   });
   return apiGet<ProblemSummary[]>(`/problems${qs}`);
 }
+
+export async function fetchProblems(): Promise<PublicProblem[]> {
+     return apiGet<PublicProblem[]>("/problems");
+   }
  
 export interface BankStats {
   total: number;
