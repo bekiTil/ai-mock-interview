@@ -29,4 +29,4 @@ EXPOSE 8000
 
 # IMPORTANT: `app.main:app` assumes your FastAPI instance is `app = FastAPI()` inside app/main.py
 # If your entrypoint lives elsewhere (e.g. backend/main.py), change the module path below.
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
