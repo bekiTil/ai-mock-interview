@@ -1490,3 +1490,198 @@ html, body, #root {
   .eval-scores { grid-template-columns: 1fr; }
   .app-problem-name { max-width: 240px; }
 }
+
+/* ========================================================================
+   12. MODE TOGGLE (text / voice) — lives in the header
+   ======================================================================== */
+
+.mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.mode-toggle-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.mode-toggle-option:hover:not(:disabled):not(.is-active) {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.mode-toggle-option.is-active {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+}
+
+.mode-toggle-option:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+
+/* ========================================================================
+   13. VOICE PANEL
+   ======================================================================== */
+
+.voice-panel .chat-header-dot {
+  background: var(--accent-purple);
+  box-shadow: 0 0 8px var(--accent-purple);
+}
+
+.voice-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+}
+
+.voice-mic {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-primary);
+  color: var(--accent-primary-fg);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.voice-mic:hover:not(:disabled) {
+  transform: scale(1.04);
+}
+
+.voice-mic:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.voice-mic-listening {
+  background: var(--danger);
+  color: #fff;
+  animation: voice-mic-pulse 1.4s ease-out infinite;
+}
+
+@keyframes voice-mic-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.55); }
+  70%  { box-shadow: 0 0 0 18px rgba(248, 113, 113, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+}
+
+.voice-mic-speaking {
+  background: var(--accent-blue);
+  color: #fff;
+  animation: voice-mic-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes voice-mic-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0); }
+  50%      { box-shadow: 0 0 0 12px rgba(96, 165, 250, 0.18); }
+}
+
+.voice-status {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.voice-status-text {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: var(--lh-snug);
+}
+
+.voice-status-listening {
+  color: var(--accent-red);
+  font-weight: var(--fw-medium);
+}
+
+.voice-status-speaking {
+  color: var(--accent-blue);
+  font-weight: var(--fw-medium);
+}
+
+.voice-error {
+  margin: 0 var(--space-5) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-sm);
+  color: var(--accent-red);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: var(--radius-md);
+}
+
+/* Live "user transcribing" bubble */
+.voice-live-bubble {
+  opacity: 0.85;
+  border: 1px dashed var(--border-strong);
+}
+
+/* AI speaking bubble — equalizer animation */
+.voice-speaking-bubble .voice-equalizer {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 22px;
+  padding: 4px 0;
+}
+
+.voice-speaking-bubble .voice-equalizer span {
+  display: block;
+  width: 4px;
+  background: var(--accent-blue);
+  border-radius: 2px;
+  animation: voice-eq 1s ease-in-out infinite;
+}
+
+.voice-speaking-bubble .voice-equalizer span:nth-child(1) { animation-delay: 0.0s;  height: 30%; }
+.voice-speaking-bubble .voice-equalizer span:nth-child(2) { animation-delay: 0.15s; height: 60%; }
+.voice-speaking-bubble .voice-equalizer span:nth-child(3) { animation-delay: 0.3s;  height: 90%; }
+.voice-speaking-bubble .voice-equalizer span:nth-child(4) { animation-delay: 0.45s; height: 60%; }
+.voice-speaking-bubble .voice-equalizer span:nth-child(5) { animation-delay: 0.6s;  height: 40%; }
+
+@keyframes voice-eq {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.7; }
+  50%      { transform: scaleY(1.4); opacity: 1; }
+}
+
+/* Mobile / narrow viewport tweaks */
+@media (max-width: 640px) {
+  .voice-mic {
+    width: 48px;
+    height: 48px;
+  }
+  .voice-controls {
+    padding: var(--space-3) var(--space-4);
+  }
+  .mode-toggle-option span {
+    display: none;
+  }
+}

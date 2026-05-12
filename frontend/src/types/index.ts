@@ -11,6 +11,9 @@ export interface ChatMessage {
   content: string;
 }
 
+/** Whether the interview is conducted via typing or via voice. */
+export type InterviewMode = "text" | "voice";
+
 export type Difficulty = "easy" | "medium" | "hard";
 
 

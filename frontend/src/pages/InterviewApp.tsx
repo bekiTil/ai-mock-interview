@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import Header from "../components/Header";
 import ProblemStatement from "../components/ProblemStatement";
 import ChatPanel from "../components/ChatPanel";
+import VoicePanel from "../components/VoicePanel";
 import CodeEditor from "../components/CodeEditor";
 import OutputPanel from "../components/OutputPanel";
 import ProblemPicker from "../components/ProblemPicker";
@@ -12,12 +13,14 @@ import ProblemPicker from "../components/ProblemPicker";
 import { runTests, submitSolution } from "../api/execution";
 import { sendTurn } from "../api/interview";
 import { fetchRandomProblem, fetchProblemById } from "../api/problems";
+import { useSpeechSynthesis } from "../hooks/useSpeechSynthesis";
 import type {
   ChatMessage,
   Evaluation,
+  InterviewMode,
   PublicProblem,
   RunTestsResponse,
-  ProblemSummary
+  ProblemSummary,
 } from "../types";
 
 const OPENING_CANDIDATE_MESSAGE: ChatMessage = {
@@ -40,6 +43,13 @@ function formatExamples(problem: PublicProblem): string {
     .join("\n\n");
 }
 
+// Detect Web Speech API support once on mount.
+function detectVoiceSupport(): boolean {
+  if (typeof window === "undefined") return false;
+  return "speechSynthesis" in window &&
+    !!(("SpeechRecognition" in window) || ("webkitSpeechRecognition" in window));
+}
+
 function InterviewApp() {
   const [problem, setProblem] = useState<PublicProblem | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState<boolean>(false);
@@ -59,8 +69,16 @@ function InterviewApp() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState<boolean>(false);
 
+  // v2: interview mode (text vs voice). Defaults to text.
+  const [mode, setMode] = useState<InterviewMode>("text");
+  const isVoiceSupported = detectVoiceSupport();
+
+  // TTS — used only when mode === "voice".
+  const { isSpeaking, speak, cancel: cancelSpeech } = useSpeechSynthesis();
+
   const fetchedRef = useRef<boolean>(false);
   const greetedForIdRef = useRef<string | null>(null);
+  const lastSpokenIndexRef = useRef<number>(-1);
 
   // --- Fetch a random problem once on mount ---
   useEffect(() => {
@@ -96,6 +114,7 @@ function InterviewApp() {
     setRunError(null);
     setEvaluation(null);
     setEvaluationError(null);
+    lastSpokenIndexRef.current = -1;
 
     (async () => {
       setIsSending(true);
@@ -120,6 +139,36 @@ function InterviewApp() {
       }
     })();
   }, [problem?.id]);
+
+  // --- Auto-speak new interviewer messages when in voice mode ---
+  useEffect(() => {
+    if (mode !== "voice") return;
+    if (messages.length === 0) return;
+    const lastIndex = messages.length - 1;
+    if (lastIndex <= lastSpokenIndexRef.current) return;
+    const last = messages[lastIndex];
+    if (last.role !== "interviewer") return;
+    // Skip error placeholders so we don't speak "[error] ...".
+    if (last.content.startsWith("[error")) return;
+    lastSpokenIndexRef.current = lastIndex;
+    speak(last.content);
+  }, [messages, mode, speak]);
+
+  // --- When switching mode, cancel any in-flight TTS so it doesn't bleed across ---
+  useEffect(() => {
+    if (mode === "text") {
+      cancelSpeech();
+    }
+  }, [mode, cancelSpeech]);
+
+  function handleChangeMode(next: InterviewMode) {
+    setMode(next);
+    // If switching to voice mid-session, treat the latest interviewer message
+    // as already-said (so we don't suddenly read out backlog).
+    if (next === "voice") {
+      lastSpokenIndexRef.current = messages.length - 1;
+    }
+  }
 
   async function handleRun() {
     if (!problem) return;
@@ -191,27 +240,30 @@ function InterviewApp() {
   }
 
   async function handlePickProblem(summary: ProblemSummary) {
-  try {
-    const full = await fetchProblemById(summary.id);
-    setProblem(full);
-    setCode(full.starter_code);
-  } catch (err) {
-    setMessages([
-      {
-        role: "interviewer",
-        content: `[error loading problem] ${
-          err instanceof Error ? err.message : String(err)
-        }`,
-      },
-    ]);
+    try {
+      const full = await fetchProblemById(summary.id);
+      setProblem(full);
+      setCode(full.starter_code);
+    } catch (err) {
+      setMessages([
+        {
+          role: "interviewer",
+          content: `[error loading problem] ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        },
+      ]);
+    }
   }
-}
 
   return (
     <div className="app">
       <Header
         problemTitle={problem?.title ?? "Loading..."}
         onSwitchProblem={() => setIsPickerOpen(true)}
+        mode={mode}
+        onChangeMode={handleChangeMode}
+        isVoiceSupported={isVoiceSupported}
       />
       <div className="main">
         <div className="left-panel">
@@ -222,11 +274,21 @@ function InterviewApp() {
             }
             example={problem ? formatExamples(problem) : ""}
           />
-          <ChatPanel
-            messages={messages}
-            onSend={handleSend}
-            isSending={isSending}
-          />
+          {mode === "voice" ? (
+            <VoicePanel
+              messages={messages}
+              onSend={handleSend}
+              isSending={isSending}
+              isSpeaking={isSpeaking}
+              onCancelSpeech={cancelSpeech}
+            />
+          ) : (
+            <ChatPanel
+              messages={messages}
+              onSend={handleSend}
+              isSending={isSending}
+            />
+          )}
         </div>
         <div className="code-panel">
           <CodeEditor

@@ -1,17 +1,28 @@
 // frontend/src/components/Header.tsx
 //
 // v1 redesign — polished app header.
-// Props unchanged from your current Header so this is a drop-in replacement.
+// Now also hosts the text/voice mode toggle.
 
 import { Link } from "react-router-dom";
+import type { InterviewMode } from "../types";
 
 interface HeaderProps {
   problemTitle: string;
   difficulty?: "Easy" | "Medium" | "Hard";
   onSwitchProblem: () => void;
+  mode: InterviewMode;
+  onChangeMode: (mode: InterviewMode) => void;
+  isVoiceSupported?: boolean;
 }
 
-function Header({ problemTitle, difficulty, onSwitchProblem }: HeaderProps) {
+function Header({
+  problemTitle,
+  difficulty,
+  onSwitchProblem,
+  mode,
+  onChangeMode,
+  isVoiceSupported = true,
+}: HeaderProps) {
   return (
     <header className="app-header">
       <div className="app-header-left">
@@ -30,6 +41,11 @@ function Header({ problemTitle, difficulty, onSwitchProblem }: HeaderProps) {
       </div>
 
       <div className="app-header-right">
+        <ModeToggle
+          mode={mode}
+          onChangeMode={onChangeMode}
+          isVoiceSupported={isVoiceSupported}
+        />
         <button
           className="app-switch-button"
           onClick={onSwitchProblem}
@@ -40,6 +56,49 @@ function Header({ problemTitle, difficulty, onSwitchProblem }: HeaderProps) {
         </button>
       </div>
     </header>
+  );
+}
+
+function ModeToggle({
+  mode,
+  onChangeMode,
+  isVoiceSupported,
+}: {
+  mode: InterviewMode;
+  onChangeMode: (mode: InterviewMode) => void;
+  isVoiceSupported: boolean;
+}) {
+  const voiceDisabled = !isVoiceSupported;
+  const voiceTitle = voiceDisabled
+    ? "Voice mode requires Chrome, Edge, or Safari"
+    : "Switch to voice mode";
+
+  return (
+    <div className="mode-toggle" role="tablist" aria-label="Interview mode">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === "text"}
+        className={`mode-toggle-option ${mode === "text" ? "is-active" : ""}`}
+        onClick={() => onChangeMode("text")}
+        title="Switch to text mode"
+      >
+        <TextIcon />
+        <span>Text</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === "voice"}
+        className={`mode-toggle-option ${mode === "voice" ? "is-active" : ""}`}
+        onClick={() => !voiceDisabled && onChangeMode("voice")}
+        disabled={voiceDisabled}
+        title={voiceTitle}
+      >
+        <MicSmallIcon />
+        <span>Voice</span>
+      </button>
+    </div>
   );
 }
 
@@ -69,6 +128,29 @@ function ShuffleIcon() {
       <path d="M11 3L13 5L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M11 7L13 9L11 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M1 5H4L8 9H13M1 9H4L5 8M8 5H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function TextIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M3 4h10M3 8h10M3 12h6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MicSmallIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <rect x="6" y="2" width="4" height="8" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3.5 7.5a4.5 4.5 0 009 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M8 12v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
