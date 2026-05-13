@@ -1,0 +1,81 @@
+# .github/workflows/keepalive.yml
+#
+# Pings the Render backend every 8 minutes, 24/7, to keep the free tier
+# from spinning down. Render idles at 15 min; an 8-min schedule gives ~7
+# minutes of buffer for GitHub's notoriously imprecise cron scheduler.
+#
+# Why this is more reliable than the old version:
+#   - Runs around the clock (was: weekdays 9am-7pm ET only).
+#   - 8-min interval, not 10 — survives typical GH cron delays of 5-15 min.
+#   - Generous --max-time so a cold-start ping still succeeds (don't time
+#     out before Render finishes waking up).
+#   - Retries on transient failure, with backoff.
+#   - Hits both /health and /problems to fully warm the app + JIT path.
+#   - concurrency: cancels the previous run if a new one starts, so we
+#     never overlap or stack up.
+#   - Fails the job loudly if ALL retries fail — you'll get a GitHub
+#     notification email and a red X on the Actions tab.
+
+name: keepalive
+
+on:
+  schedule:
+    # Every 8 minutes, every day. Free GitHub Actions cron is "best effort"
+    # but in practice runs within a few minutes of schedule.
+    - cron: "*/8 * * * *"
+  workflow_dispatch:
+    # Lets you trigger a ping manually from the Actions tab UI.
+    inputs:
+      reason:
+        description: "Why are you running this manually?"
+        required: false
+        default: "manual warm-up"
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    env:
+      BACKEND_URL: https://mock-with-ai-backend.onrender.com
+
+    steps:
+      - name: Ping /health (with retry and cold-start tolerance)
+        id: health
+        run: |
+          set -e
+          echo "Pinging $BACKEND_URL/health"
+          # --max-time 90 — Render cold start can take 30-60s. Give it room.
+          # --retry 4 + --retry-delay 8 — 4 tries spaced 8s apart.
+          # --retry-all-errors — retry even on HTTP 5xx, not just connection errors.
+          curl -fsS \
+            --max-time 90 \
+            --retry 4 \
+            --retry-delay 8 \
+            --retry-all-errors \
+            --show-error \
+            "$BACKEND_URL/health"
+          echo ""
+          echo "health OK"
+
+      - name: Warm /problems (avoid first-real-user delay)
+        # Once /health is up, hit a real endpoint so any lazy imports
+        # (Gemini client, Judge0 client, problem bank) get loaded too.
+        # Failure here is non-fatal; the service is already warm.
+        continue-on-error: true
+        run: |
+          echo "Warming $BACKEND_URL/problems"
+          curl -fsS \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 4 \
+            --retry-all-errors \
+            --show-error \
+            "$BACKEND_URL/problems" \
+            -o /dev/null \
+            -w "problems HTTP %{http_code} in %{time_total}s\n" \
+            || echo "warm step failed (non-fatal)"
