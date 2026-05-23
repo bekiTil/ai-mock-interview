@@ -3,3 +3,6 @@ uvicorn[standard]
 python-dotenv
 httpx
 google-genai
+openai
+fastembed
+numpy

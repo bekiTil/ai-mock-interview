@@ -1,22 +1,24 @@
-# backend/app/services/evaluator.py
-#
-# Day 5 Part 4 — Gemini-backed interview evaluator.
-#
-# Mirrors the class+singleton pattern of your existing Interviewer service.
-# Uses google-genai's response_schema feature to force Pydantic-shaped JSON
-# instead of us parsing free-form text.
+"""Evaluator service — uses the multi-provider router for the final scorecard.
+
+The scorecard is unique per session (depends on the full transcript + code)
+so we DON'T cache it. Just route through the provider chain in JSON mode.
+"""
+
+from __future__ import annotations
 
 import json
-import os
-from typing import Any
-
-from google import genai
-from google.genai import types
+import logging
+import re
+from typing import Optional
 
 from app.schemas.interview import ChatMessage
 from app.schemas.problem import Problem
 from app.schemas.submission import Evaluation
 from app.schemas.tests import RunTestsResponse
+from app.services.llm_providers import ChatMessage as LLMMessage
+from app.services.llm_router import RouterResult, get_router
+
+log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -77,20 +79,52 @@ Verdict:
   needs_work   — below bar but showed promise; mostly 2s and 3s
   not_ready    — significant gaps; mostly 1s and 2s
 
+OUTPUT FORMAT
+You MUST respond with a single JSON object matching exactly this shape:
+{
+  "verdict": "strong" | "solid" | "needs_work" | "not_ready",
+  "correctness": 1-5 integer,
+  "code_quality": 1-5 integer,
+  "communication": 1-5 integer,
+  "problem_solving": 1-5 integer,
+  "strengths": ["string", ...],
+  "weaknesses": ["string", ...],
+  "summary": "string"
+}
+No prose before or after the JSON. No markdown fences. Just the JSON.
+
 Be specific. Quote the candidate's actual code or words when citing strengths or weaknesses. Do not be falsely kind — the candidate wants feedback they can act on. Do not be cruel either — this is calibrated, professional feedback."""
 
 
+_HIDDEN_OPENER_PREFIX = "Hi, I'm ready to start the interview"
+
+
 # ---------------------------------------------------------------------------
-# Evaluator
+# JSON repair: small open-weight models sometimes wrap output in ```json fences
+# or include preamble text. Strip both before parsing.
 # ---------------------------------------------------------------------------
 
+
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
+_JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
+
+
+def _extract_json(text: str) -> str:
+    """Pull the JSON object out of `text` even if wrapped in fences or prose."""
+    text = text.strip()
+    # Try fenced block first.
+    m = _FENCE_RE.search(text)
+    if m:
+        return m.group(1).strip()
+    # Fall back to "first { ... last }" heuristic.
+    m = _JSON_OBJECT_RE.search(text)
+    if m:
+        return m.group(0).strip()
+    return text
+
+
 class Evaluator:
-    def __init__(self, model: str = "gemini-2.5-flash-lite") -> None:
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise RuntimeError("GEMINI_API_KEY is not set")
-        self.client = genai.Client(api_key=api_key)
-        self.model = model
+    """Single-shot scorecard generator. No caching (always unique)."""
 
     async def evaluate(
         self,
@@ -101,31 +135,41 @@ class Evaluator:
     ) -> Evaluation:
         user_prompt = self._build_prompt(problem, code, history, test_results)
 
-        response = await self.client.aio.models.generate_content(
-            model=self.model,
-            contents=user_prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=EVAL_SYSTEM_PROMPT,
-                response_mime_type="application/json",
-                response_schema=Evaluation,
-                temperature=0.3,
-                max_output_tokens=1000,
-            ),
+        messages = [
+            LLMMessage(role="system", content=EVAL_SYSTEM_PROMPT),
+            LLMMessage(role="user", content=user_prompt),
+        ]
+
+        router = get_router()
+
+        # Sync router → wrap in to_thread.
+        import asyncio
+        result: RouterResult = await asyncio.to_thread(
+            router.complete,
+            messages,
+            temperature=0.3,
+            max_tokens=1000,
+            response_format={"type": "json_object"},
         )
 
-        # google-genai returns a parsed Pydantic instance when response_schema
-        # is a model. Fall back to manual JSON parse if for some reason it
-        # comes back as a dict or text.
-        parsed: Any = getattr(response, "parsed", None)
-        if isinstance(parsed, Evaluation):
-            return parsed
-        if isinstance(parsed, dict):
-            return Evaluation(**parsed)
+        return self._parse_evaluation(result.text)
 
-        text = response.text or ""
-        if not text.strip():
-            raise RuntimeError("evaluator returned empty response")
-        return Evaluation(**json.loads(text))
+    # ---------- output parsing ----------
+
+    @staticmethod
+    def _parse_evaluation(text: str) -> Evaluation:
+        cleaned = _extract_json(text)
+        try:
+            data = json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            log.error("evaluator: JSON parse failed. Raw text:\n%s", text)
+            raise RuntimeError(f"evaluator returned malformed JSON: {e}") from e
+
+        try:
+            return Evaluation(**data)
+        except Exception as e:  # noqa: BLE001
+            log.error("evaluator: Pydantic validation failed for: %s", data)
+            raise RuntimeError(f"evaluator returned unexpected shape: {e}") from e
 
     # ---------- prompt construction ----------
 
@@ -151,20 +195,16 @@ class Evaluator:
             f"(candidate sent {candidate_msg_count} message"
             f"{'' if candidate_msg_count == 1 else 's'}):\n\n{transcript}\n\n"
             f"---\n\n"
-            f"Produce your structured evaluation now."
+            f"Produce your structured evaluation now as a single JSON object."
         )
-
-   
-    _HIDDEN_OPENER_PREFIX = "Hi, I'm ready to start the interview"
 
     @classmethod
     def _format_transcript(cls, history: list[ChatMessage]) -> tuple[str, int]:
-        """Returns (rendered_transcript, real_candidate_message_count)."""
         real_msgs = [
             m for m in history
             if not (
                 m.role == "candidate"
-                and m.content.startswith(cls._HIDDEN_OPENER_PREFIX)
+                and m.content.startswith(_HIDDEN_OPENER_PREFIX)
             )
         ]
         candidate_count = sum(1 for m in real_msgs if m.role == "candidate")
@@ -172,7 +212,7 @@ class Evaluator:
         if not real_msgs:
             return "(no conversation — candidate did not send any messages)", 0
 
-        lines = []
+        lines: list[str] = []
         for msg in real_msgs:
             role = "Interviewer" if msg.role == "interviewer" else "Candidate"
             lines.append(f"{role}: {msg.content}")
@@ -201,5 +241,4 @@ class Evaluator:
         return "\n".join(parts)
 
 
-# Module-level singleton, mirroring your code_executor / interviewer pattern.
 evaluator = Evaluator()
