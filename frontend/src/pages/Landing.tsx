@@ -79,9 +79,9 @@ function Hero() {
             <span className="hero-headline-accent">pushes back.</span>
           </h1>
           <p className="hero-sub">
-            Real coding problems. A conversational AI interviewer that reads your
-            code and asks real follow-ups. Honest, calibrated feedback you can
-            act on — not a participation trophy.
+            Real problems. A conversational interviewer that reads your code,
+            asks real follow-ups, and leaves you with a calibrated scorecard
+            you can act on — not a participation trophy.
           </p>
           <div className="hero-cta">
             <Link to="/interview" className="btn btn-primary">
@@ -223,9 +223,9 @@ function TechStrip() {
     "FastAPI",
     "React + Vite",
     "Monaco Editor",
-    "LLM Interviewer",
+    "Llama 3.3 70B",
+    "Multi-provider routing",
     "Sandboxed execution",
-    "Structured scoring",
     "Self-hostable",
   ];
   return (

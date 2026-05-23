@@ -1,63 +1,93 @@
 :root {
-  /* ---------- Surfaces ---------- */
-  --bg-page:         #0a0a0a;   /* page background */
-  --bg-surface:      #111111;   /* cards, panels */
-  --bg-elevated:     #171717;   /* hover / modals */
-  --bg-subtle:       #0f0f0f;
-  --bg-code:         #0d0d0d;
+  /* ============================================================
+     PALETTE — warm dark + amber + cream
+     Distinct from the generic "AI app" cyan/purple stack.
+     ============================================================ */
 
-  /* ---------- Borders ---------- */
-  --border-subtle:   #1a1a1a;
-  --border-default:  #262626;
-  --border-strong:   #333333;
-  --border-focus:    #3f3f3f;
+  /* ---------- Surfaces (warm darks, not pure black) ---------- */
+  --bg-page:         #0A0806;   /* deep warm dark — almost coffee bean */
+  --bg-surface:      #15110C;   /* cards, panels */
+  --bg-elevated:     #1E1813;   /* hover / modals */
+  --bg-subtle:       #110D08;
+  --bg-code:         #12110F;
 
-  /* ---------- Text ---------- */
-  --text-primary:    #ededed;
-  --text-secondary:  #a1a1a1;
-  --text-muted:      #666666;
-  --text-dim:        #404040;
+  /* ---------- Borders (warm, low-contrast) ---------- */
+  --border-subtle:   #1F1A12;
+  --border-default:  #2B2519;
+  --border-strong:   #3D3422;
+  --border-focus:    #5C4F37;
 
-  /* ---------- Accents ---------- */
-  --accent-primary:     #ffffff;
-  --accent-primary-fg:  #000000;
-  --accent-hover:       #e5e5e5;
+  /* ---------- Text (cream, never pure white) ---------- */
+  --text-primary:    #F2E9D2;   /* warm cream */
+  --text-secondary:  #A89A82;
+  --text-muted:      #6B6354;
+  --text-dim:        #44402F;
 
-  --accent-blue:        #60a5fa;
-  --accent-green:       #4ade80;
-  --accent-yellow:      #fbbf24;
-  --accent-red:         #f87171;
-  --accent-purple:      #a78bfa;
+  /* ---------- Brand accent — single, confident amber ---------- */
+  --accent-amber:        #FFB454;   /* THE color */
+  --accent-amber-bright: #FFA62B;
+  --accent-amber-deep:   #C9802B;
+  --accent-amber-soft:   rgba(255, 180, 84, 0.12);
+  --accent-amber-glow:   rgba(255, 180, 84, 0.25);
 
-  --link:            #a1a1a1;
-  --link-hover:      #ededed;
-  --focus-ring:      rgba(96, 165, 250, 0.4);
+  /* ---------- Primary buttons / "white" ---------- */
+  --accent-primary:     #F2E9D2;     /* cream button bg */
+  --accent-primary-fg:  #15110C;     /* dark text on cream */
+  --accent-hover:       #FFFAEB;
 
-  /* ---------- Semantic ---------- */
-  --success:         #4ade80;
-  --warning:         #fbbf24;
-  --danger:          #f87171;
-  --info:            #60a5fa;
+  /* ---------- Semantic (warmer than default Tailwind) ---------- */
+  --accent-sage:        #8FB17E;   /* easy / success */
+  --accent-amber-state: #FFB454;   /* medium / warning */
+  --accent-rose:        #E07B5C;   /* hard / danger */
 
-  /* ---------- Shadows (subtle, never flashy) ---------- */
-  --shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md:       0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg:       0 12px 32px rgba(0, 0, 0, 0.5);
-  --shadow-ring:     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --shadow-glow:     0 0 40px rgba(96, 165, 250, 0.15);
+  /* Aliases kept for back-compat with existing components */
+  --accent-green:       #8FB17E;
+  --accent-yellow:      #FFB454;
+  --accent-red:         #E07B5C;
+  --accent-blue:        #6BA8C4;   /* used for syntax-highlight only */
+  --accent-purple:      #C39AC4;   /* used for syntax-highlight only */
 
-  /* ---------- Radii ---------- */
-  --radius-sm:       4px;
-  --radius-md:       6px;
-  --radius-lg:       10px;
-  --radius-xl:       16px;
+  --success:            #8FB17E;
+  --warning:            #FFB454;
+  --danger:             #E07B5C;
+  --info:               #6BA8C4;
+
+  --link:               #A89A82;
+  --link-hover:         #F2E9D2;
+  --focus-ring:         rgba(255, 180, 84, 0.4);
+
+  /* ---------- Shadows (warmer, restrained) ---------- */
+  --shadow-sm:          0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md:          0 6px 18px rgba(0, 0, 0, 0.50);
+  --shadow-lg:          0 18px 48px rgba(0, 0, 0, 0.55);
+  --shadow-ring:        inset 0 0 0 1px rgba(242, 233, 210, 0.06);
+  --shadow-glow:        0 0 60px rgba(255, 180, 84, 0.18);
+  --shadow-amber-edge:  0 0 0 1px rgba(255, 180, 84, 0.4),
+                        0 6px 30px rgba(255, 180, 84, 0.15);
+
+  /* ---------- Radii — slightly sharper than before ---------- */
+  --radius-sm:       3px;
+  --radius-md:       5px;
+  --radius-lg:       8px;
+  --radius-xl:       14px;
   --radius-full:     999px;
 
-  /* ---------- Typography ---------- */
-  --font-sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-                Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono:  "JetBrains Mono", "SF Mono", Menlo, Consolas,
-                "Liberation Mono", monospace;
+  /* ============================================================
+     TYPOGRAPHY
+     Display = Fraunces (variable serif, editorial soul)
+     Sans    = Inter (UI body)
+     Mono    = JetBrains Mono (eyebrows, code, technical labels)
+     ============================================================ */
+
+  --font-display:
+    "Fraunces", "Iowan Old Style", "Apple Garamond", "Baskerville",
+    "Times New Roman", serif;
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    "JetBrains Mono", "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
 
   --fs-xs:           12px;
   --fs-sm:           13px;
@@ -69,22 +99,25 @@
   --fs-3xl:          40px;
   --fs-4xl:          56px;
   --fs-5xl:          72px;
+  --fs-6xl:          92px;
 
-  --lh-tight:        1.15;
-  --lh-snug:         1.35;
-  --lh-normal:       1.5;
+  --lh-tight:        1.05;
+  --lh-snug:         1.25;
+  --lh-normal:       1.55;
   --lh-relaxed:      1.7;
 
   --fw-normal:       400;
   --fw-medium:       500;
   --fw-semibold:     600;
   --fw-bold:         700;
+  --fw-black:        900;
 
-  --tracking-tight:  -0.02em;
-  --tracking-tighter:-0.035em;
-  --tracking-normal: 0;
-  --tracking-wide:   0.04em;
-  --tracking-wider:  0.08em;
+  --tracking-tight:   -0.02em;
+  --tracking-tighter: -0.04em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.04em;
+  --tracking-wider:   0.08em;
+  --tracking-widest:  0.16em;
 
   /* ---------- Spacing ---------- */
   --space-1:   4px;
@@ -99,6 +132,7 @@
   --space-16:  64px;
   --space-20:  80px;
   --space-24:  96px;
+  --space-32:  128px;
 
   /* ---------- Motion ---------- */
   --ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
@@ -138,19 +172,30 @@ html, body, #root {
   min-height: 100vh;
 }
 
+/* Subtle film grain across the whole app — kills the AI-flat feel.
+   SVG noise is inlined so it doesn't trigger an extra HTTP request. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 0.9 0 0 0 0 0.7 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.5'/></svg>");
+}
+
 ::selection {
-  background: rgba(96, 165, 250, 0.3);
+  background: rgba(255, 180, 84, 0.35);
   color: var(--text-primary);
 }
 
-/* Focus-visible ring for keyboard accessibility */
 :focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* Scrollbar polish (webkit only — Firefox falls back to defaults) */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
