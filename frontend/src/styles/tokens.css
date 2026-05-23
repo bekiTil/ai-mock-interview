@@ -1,80 +1,61 @@
 :root {
-  /* ============================================================
-     PALETTE — warm dark + amber + cream
-     Distinct from the generic "AI app" cyan/purple stack.
-     ============================================================ */
+  /* ---------- Surfaces ---------- */
+  --bg-page:         #0a0a0a;
+  --bg-surface:      #111111;
+  --bg-elevated:     #171717;
+  --bg-subtle:       #0f0f0f;
+  --bg-code:         #0d0d0d;
 
-  /* ---------- Surfaces (warm darks, not pure black) ---------- */
-  --bg-page:         #0A0806;   /* deep warm dark — almost coffee bean */
-  --bg-surface:      #15110C;   /* cards, panels */
-  --bg-elevated:     #1E1813;   /* hover / modals */
-  --bg-subtle:       #110D08;
-  --bg-code:         #12110F;
+  /* ---------- Borders ---------- */
+  --border-subtle:   #1a1a1a;
+  --border-default:  #262626;
+  --border-strong:   #333333;
+  --border-focus:    #3f3f3f;
 
-  /* ---------- Borders (warm, low-contrast) ---------- */
-  --border-subtle:   #1F1A12;
-  --border-default:  #2B2519;
-  --border-strong:   #3D3422;
-  --border-focus:    #5C4F37;
+  /* ---------- Text ---------- */
+  --text-primary:    #ededed;
+  --text-secondary:  #a1a1a1;
+  --text-muted:      #666666;
+  --text-dim:        #404040;
 
-  /* ---------- Text (cream, never pure white) ---------- */
-  --text-primary:    #F2E9D2;   /* warm cream */
-  --text-secondary:  #A89A82;
-  --text-muted:      #6B6354;
-  --text-dim:        #44402F;
+  /* ---------- Accents ---------- */
+  --accent-primary:     #ffffff;
+  --accent-primary-fg:  #000000;
+  --accent-hover:       #e5e5e5;
 
-  /* ---------- Brand accent — single, confident amber ---------- */
-  --accent-amber:        #FFB454;   /* THE color */
-  --accent-amber-bright: #FFA62B;
-  --accent-amber-deep:   #C9802B;
-  --accent-amber-soft:   rgba(255, 180, 84, 0.12);
-  --accent-amber-glow:   rgba(255, 180, 84, 0.25);
+  --accent-blue:        #60a5fa;
+  --accent-green:       #4ade80;
+  --accent-yellow:      #fbbf24;
+  --accent-red:         #f87171;
+  --accent-purple:      #a78bfa;
 
-  /* ---------- Primary buttons / "white" ---------- */
-  --accent-primary:     #F2E9D2;     /* cream button bg */
-  --accent-primary-fg:  #15110C;     /* dark text on cream */
-  --accent-hover:       #FFFAEB;
+  --link:            #a1a1a1;
+  --link-hover:      #ededed;
+  --focus-ring:      rgba(96, 165, 250, 0.4);
 
-  /* ---------- Semantic (warmer than default Tailwind) ---------- */
-  --accent-sage:        #8FB17E;   /* easy / success */
-  --accent-amber-state: #FFB454;   /* medium / warning */
-  --accent-rose:        #E07B5C;   /* hard / danger */
+  /* ---------- Semantic ---------- */
+  --success:         #4ade80;
+  --warning:         #fbbf24;
+  --danger:          #f87171;
+  --info:            #60a5fa;
 
-  /* Aliases kept for back-compat with existing components */
-  --accent-green:       #8FB17E;
-  --accent-yellow:      #FFB454;
-  --accent-red:         #E07B5C;
-  --accent-blue:        #6BA8C4;   /* used for syntax-highlight only */
-  --accent-purple:      #C39AC4;   /* used for syntax-highlight only */
+  /* ---------- Shadows ---------- */
+  --shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md:       0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg:       0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-ring:     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-glow:     0 0 40px rgba(96, 165, 250, 0.15);
 
-  --success:            #8FB17E;
-  --warning:            #FFB454;
-  --danger:             #E07B5C;
-  --info:               #6BA8C4;
-
-  --link:               #A89A82;
-  --link-hover:         #F2E9D2;
-  --focus-ring:         rgba(255, 180, 84, 0.4);
-
-  /* ---------- Shadows (warmer, restrained) ---------- */
-  --shadow-sm:          0 1px 2px rgba(0, 0, 0, 0.45);
-  --shadow-md:          0 6px 18px rgba(0, 0, 0, 0.50);
-  --shadow-lg:          0 18px 48px rgba(0, 0, 0, 0.55);
-  --shadow-ring:        inset 0 0 0 1px rgba(242, 233, 210, 0.06);
-  --shadow-glow:        0 0 60px rgba(255, 180, 84, 0.18);
-  --shadow-amber-edge:  0 0 0 1px rgba(255, 180, 84, 0.4),
-                        0 6px 30px rgba(255, 180, 84, 0.15);
-
-  /* ---------- Radii — slightly sharper than before ---------- */
-  --radius-sm:       3px;
-  --radius-md:       5px;
-  --radius-lg:       8px;
-  --radius-xl:       14px;
+  /* ---------- Radii ---------- */
+  --radius-sm:       4px;
+  --radius-md:       6px;
+  --radius-lg:       10px;
+  --radius-xl:       16px;
   --radius-full:     999px;
 
   /* ============================================================
-     TYPOGRAPHY
-     Display = Fraunces (variable serif, editorial soul)
+     TYPOGRAPHY (kept from the redesign)
+     Display = Fraunces (variable serif)
      Sans    = Inter (UI body)
      Mono    = JetBrains Mono (eyebrows, code, technical labels)
      ============================================================ */
@@ -101,9 +82,9 @@
   --fs-5xl:          72px;
   --fs-6xl:          92px;
 
-  --lh-tight:        1.05;
-  --lh-snug:         1.25;
-  --lh-normal:       1.55;
+  --lh-tight:        1.15;
+  --lh-snug:         1.35;
+  --lh-normal:       1.5;
   --lh-relaxed:      1.7;
 
   --fw-normal:       400;
@@ -113,7 +94,7 @@
   --fw-black:        900;
 
   --tracking-tight:   -0.02em;
-  --tracking-tighter: -0.04em;
+  --tracking-tighter: -0.035em;
   --tracking-normal:  0;
   --tracking-wide:    0.04em;
   --tracking-wider:   0.08em;
@@ -172,21 +153,8 @@ html, body, #root {
   min-height: 100vh;
 }
 
-/* Subtle film grain across the whole app — kills the AI-flat feel.
-   SVG noise is inlined so it doesn't trigger an extra HTTP request. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.035;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 0.9 0 0 0 0 0.7 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.5'/></svg>");
-}
-
 ::selection {
-  background: rgba(255, 180, 84, 0.35);
+  background: rgba(96, 165, 250, 0.3);
   color: var(--text-primary);
 }
 

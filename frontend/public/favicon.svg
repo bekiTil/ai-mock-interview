@@ -1,7 +1,30 @@
-<!-- Save as frontend/public/favicon.svg -->
+<!-- mock-with-ai favicon. Matches the nav logo (stacked chevrons in a rounded square)
+     but with solid blue fill so it stays visible in any browser-tab background. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#0a0a0a"/>
-  <rect x="5" y="5" width="22" height="22" rx="5" stroke="#ededed" stroke-width="2" fill="none"/>
-  <path d="M10 12 L16 17 L22 12" stroke="#ededed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <path d="M10 19 L16 24 L22 19" stroke="#ededed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.4"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Solid blue tile -->
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+
+  <!-- Top chevron — strong, full opacity -->
+  <path d="M8 12 L16 18.5 L24 12"
+        fill="none"
+        stroke="#ffffff"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- Bottom chevron — echo, lower opacity for hierarchy -->
+  <path d="M8 19 L16 25.5 L24 19"
+        fill="none"
+        stroke="#ffffff"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        opacity="0.55"/>
 </svg>
